@@ -6,11 +6,7 @@ mod recovery;
 mod secrets;
 
 use crate::{
-    core::{
-        cache::RedisCache,
-        idempotency::IdempotencyService,
-        types::{EndpointId, EndpointUid, EventChannelSet, EventTypeNameSet},
-    },
+    core::types::{EndpointId, EndpointUid, EventChannelSet, EventTypeNameSet},
     v1::utils::{api_not_implemented, ModelIn},
 };
 use axum::{
@@ -233,16 +229,13 @@ impl ModelIn for EndpointHeadersPatchIn {
     }
 }
 
-pub fn router(redis: Option<RedisCache>) -> Router {
+pub fn router() -> Router {
     Router::new().nest(
         "/app/:app_id",
         Router::new()
             .route(
                 "/endpoint/",
-                IdempotencyService {
-                    redis: redis.clone(),
-                    service: post(crud::create_endpoint).get(crud::list_endpoints),
-                },
+                post(crud::create_endpoint).get(crud::list_endpoints),
             )
             .route(
                 "/endpoint/:endp_id/",
@@ -256,25 +249,16 @@ pub fn router(redis: Option<RedisCache>) -> Router {
             )
             .route(
                 "/endpoint/:endp_id/secret/rotate/",
-                IdempotencyService {
-                    redis: redis.clone(),
-                    service: post(secrets::rotate_endpoint_secret),
-                },
+                post(secrets::rotate_endpoint_secret),
             )
             .route("/endpoint/:endp_id/stats/", get(api_not_implemented))
             .route(
                 "/endpoint/:endp_id/send-example/",
-                IdempotencyService {
-                    redis: redis.clone(),
-                    service: post(api_not_implemented),
-                },
+                post(api_not_implemented),
             )
             .route(
                 "/endpoint/:endp_id/recover/",
-                IdempotencyService {
-                    redis,
-                    service: post(recovery::recover_failed_webhooks),
-                },
+                post(recovery::recover_failed_webhooks),
             )
             .route(
                 "/endpoint/:endp_id/headers/",
